@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AptN / AptC Sequence Extractor</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@2.44.0/tabler-icons.min.css">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #f7f6f3;
+    --surface: #ffffff;
+    --surface2: #f1f0ec;
+    --border: rgba(0,0,0,0.12);
+    --border-md: rgba(0,0,0,0.22);
+    --text: #1a1a18;
+    --text-muted: #6b6b67;
+    --text-hint: #999994;
+    --blue: #185fa5;
+    --blue-bg: #e6f1fb;
+    --blue-text: #0c447c;
+    --green: #3b6d11;
+    --green-bg: #eaf3de;
+    --green-text: #27500a;
+    --amber: #854f0b;
+    --amber-bg: #faeeda;
+    --amber-text: #633806;
+    --red: #a32d2d;
+    --red-bg: #fcebeb;
+    --red-text: #791f1f;
+    --radius: 10px;
+    --radius-sm: 6px;
+    --radius-pill: 20px;
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #1c1c1a;
+      --surface: #262624;
+      --surface2: #2e2e2b;
+      --border: rgba(255,255,255,0.1);
+      --border-md: rgba(255,255,255,0.2);
+      --text: #f0ede8;
+      --text-muted: #9a9a94;
+      --text-hint: #666662;
+      --blue: #85b7eb;
+      --blue-bg: #0c2d50;
+      --blue-text: #b5d4f4;
+      --green-bg: #1a2e0a;
+      --green-text: #c0dd97;
+      --amber-bg: #2e1e04;
+      --amber-text: #fac775;
+      --red-bg: #2e0e0e;
+      --red-text: #f7c1c1;
+    }
+  }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    line-height: 1.6;
+  }
+
+  .page {
+    max-width: 760px;
+    margin: 0 auto;
+    padding: 3rem 1.5rem 4rem;
+  }
+
+  header { margin-bottom: 2.5rem; }
+  header h1 {
+    font-size: 22px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 4px;
+  }
+  header p {
+    font-size: 14px;
+    color: var(--text-muted);
+  }
+
+  .card {
+    background: var(--surface);
+    border: 0.5px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+  }
+
+  .section-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+    margin-bottom: 1rem;
+  }
+
+  /* Upload zone */
+  #drop-area {
+    border: 1.5px dashed var(--border-md);
+    border-radius: var(--radius);
+    padding: 3rem 2rem;
+    text-align: center;
+    background: var(--surface2);
+    cursor: pointer;
+    position: relative;
+    transition: border-color 0.2s, background 0.2s;
+  }
+  #drop-area:hover { border-color: var(--blue); background: var(--surface); }
+  #drop-area input[type=file] {
+    position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+  }
+  .upload-icon {
+    width: 52px; height: 52px; border-radius: 50%;
+    background: var(--blue-bg);
+    display: flex; align-items: center; justify-content: center;
+    margin: 0 auto 1rem;
+  }
+  .upload-icon i { font-size: 24px; color: var(--blue-text); }
+  #drop-label { font-size: 16px; font-weight: 500; margin-bottom: 4px; }
+  #drop-sub { font-size: 13px; color: var(--text-muted); }
+
+  /* Progress */
+  #progress-wrap { height: 3px; background: var(--surface2); border-radius: 2px; margin-bottom: 1.25rem; overflow: hidden; }
+  #progress-bar { height: 100%; width: 0%; background: var(--blue); border-radius: 2px; transition: width 0.15s; }
+
+  /* Metrics */
+  .metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 1.25rem; }
+  .metric {
+    background: var(--surface2);
+    border-radius: var(--radius-sm);
+    padding: 12px 14px;
+  }
+  .metric-label { font-size: 12px; color: var(--text-muted); margin-bottom: 2px; }
+  .metric-value { font-size: 24px; font-weight: 600; }
+
+  /* File list */
+  #file-list { list-style: none; margin-bottom: 1.25rem; display: flex; flex-direction: column; gap: 6px; }
+  #file-list li {
+    display: flex; align-items: center; gap: 10px;
+    padding: 9px 12px;
+    border-radius: var(--radius-sm);
+    background: var(--surface2);
+    border: 0.5px solid var(--border);
+    font-size: 13px;
+  }
+  #file-list li i { font-size: 16px; flex-shrink: 0; }
+  .ok { color: var(--green-text); }
+  .warn { color: var(--amber-text); }
+  .err { color: var(--red-text); }
+  .file-name { flex: 1; font-family: monospace; font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .file-detail { font-size: 12px; color: var(--text-muted); white-space: nowrap; }
+
+  /* Buttons */
+  .btn-row { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  .btn-primary {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 10px 20px;
+    background: var(--text);
+    color: var(--bg);
+    border: none;
+    border-radius: var(--radius-sm);
+    font-size: 14px; font-weight: 500;
+    cursor: pointer;
+    transition: opacity 0.15s;
+  }
+  .btn-primary:hover { opacity: 0.85; }
+  .btn-ghost {
+    background: none; border: none;
+    color: var(--text-muted); font-size: 13px;
+    cursor: pointer; text-decoration: underline; padding: 0;
+  }
+  .btn-ghost:hover { color: var(--text); }
+
+  /* Keywords */
+  .kw-group { margin-bottom: 1.25rem; }
+  .kw-group:last-child { margin-bottom: 0; }
+  .kw-group-label { font-size: 13px; font-weight: 500; margin-bottom: 8px; color: var(--text-muted); }
+  .kw-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 8px; min-height: 28px; }
+  .kw-tag {
+    display: inline-flex; align-items: center; gap: 4px;
+    background: var(--surface2); border: 0.5px solid var(--border);
+    border-radius: var(--radius-pill);
+    padding: 3px 8px 3px 12px;
+    font-size: 12px; font-family: monospace;
+  }
+  .kw-tag button {
+    background: none; border: none; cursor: pointer;
+    color: var(--text-hint); font-size: 15px; line-height: 1;
+    display: flex; padding: 0; transition: color 0.1s;
+  }
+  .kw-tag button:hover { color: var(--red-text); }
+  .kw-add { display: flex; gap: 6px; }
+  .kw-add input {
+    font-size: 13px; font-family: monospace;
+    padding: 6px 10px;
+    border-radius: var(--radius-sm);
+    border: 0.5px solid var(--border-md);
+    background: var(--surface);
+    color: var(--text);
+    width: 180px;
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .kw-add input:focus { border-color: var(--blue); }
+  .kw-add button {
+    font-size: 13px; padding: 6px 14px;
+    border-radius: var(--radius-sm);
+    border: 0.5px solid var(--border-md);
+    background: var(--surface);
+    color: var(--text);
+    cursor: pointer;
+    transition: background 0.15s;
+  }
+  .kw-add button:hover { background: var(--surface2); }
+
+  #status-area { display: none; }
+
+  footer {
+    margin-top: 3rem;
+    font-size: 12px;
+    color: var(--text-hint);
+    text-align: center;
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <header>
+    <h1>AptN / AptC Sequence Extractor</h1>
+    <p>Select a folder of SnapGene .dna files — sequences are extracted in your browser and exported to Excel. No data is uploaded anywhere.</p>
+  </header>
+
+  <div class="card" id="upload-card">
+    <p class="section-label">Select folder</p>
+    <div id="drop-area">
+      <input type="file" id="folder-input" webkitdirectory multiple accept=".dna" aria-label="Select folder containing .dna files">
+      <div class="upload-icon"><i class="ti ti-folder-open" aria-hidden="true"></i></div>
+      <p id="drop-label">Click to select your folder</p>
+      <p id="drop-sub">All .dna files inside will be processed automatically</p>
+    </div>
+  </div>
+
+  <div class="card" id="status-area">
+    <p class="section-label">Processing</p>
+    <div id="progress-wrap"><div id="progress-bar"></div></div>
+    <div class="metrics">
+      <div class="metric"><div class="metric-label">Files found</div><div class="metric-value" id="m-total">0</div></div>
+      <div class="metric"><div class="metric-label">Both found</div><div class="metric-value" id="m-both" style="color:var(--green-text)">0</div></div>
+      <div class="metric"><div class="metric-label">Missing one+</div><div class="metric-value" id="m-miss" style="color:var(--amber-text)">0</div></div>
+    </div>
+    <ul id="file-list"></ul>
+    <div class="btn-row">
+      <button class="btn-primary" id="dl-btn"><i class="ti ti-download" aria-hidden="true"></i> Download Excel</button>
+      <button class="btn-ghost" id="reset-btn">Process a different folder</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <p class="section-label">Keywords</p>
+    <div class="kw-group">
+      <div class="kw-group-label">AptN — feature names containing any of these are treated as AptN</div>
+      <div class="kw-tags" id="aptn-tags"></div>
+      <div class="kw-add">
+        <input id="aptn-input" placeholder="add keyword..." />
+        <button onclick="addKeyword('aptn')">Add</button>
+      </div>
+    </div>
+    <div class="kw-group">
+      <div class="kw-group-label">AptC — feature names containing any of these are treated as AptC</div>
+      <div class="kw-tags" id="aptc-tags"></div>
+      <div class="kw-add">
+        <input id="aptc-input" placeholder="add keyword..." />
+        <button onclick="addKeyword('aptc')">Add</button>
+      </div>
+    </div>
+  </div>
+
+  <footer>Runs entirely in your browser &mdash; no data leaves your computer</footer>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+const APTN_KW = ["aptn","apt_n","apt-n","aptn_gngg","aptn_nz"];
+const APTC_KW = ["aptc","apt_c","apt-c","aptc cds","aptc_cds"];
+let extractedRows = [];
+
+function renderTags() {
+  ["aptn","aptc"].forEach(type => {
+    const kws = type === "aptn" ? APTN_KW : APTC_KW;
+    const el = document.getElementById(type+"-tags");
+    el.innerHTML = kws.map((kw,i) =>
+      `<span class="kw-tag">${kw}<button onclick="removeKeyword('${type}',${i})" aria-label="remove ${kw}"><i class="ti ti-x" style="font-size:12px"></i></button></span>`
+    ).join("");
+  });
+}
+
+function addKeyword(type) {
+  const input = document.getElementById(type+"-input");
+  const val = input.value.trim().toLowerCase();
+  if (!val) return;
+  const arr = type === "aptn" ? APTN_KW : APTC_KW;
+  if (!arr.includes(val)) arr.push(val);
+  input.value = "";
+  renderTags();
+}
+
+function removeKeyword(type, idx) {
+  (type === "aptn" ? APTN_KW : APTC_KW).splice(idx, 1);
+  renderTags();
+}
+
+document.getElementById("aptn-input").addEventListener("keydown", e => { if(e.key==="Enter") addKeyword("aptn"); });
+document.getElementById("aptc-input").addEventListener("keydown", e => { if(e.key==="Enter") addKeyword("aptc"); });
+
+function parseIds(filename) {
+  const stem = filename.replace(/\.dna$/i, "");
+  const m = stem.match(/^(MI-[vV]\d+_)(\d{4})(.*)/i);
+  if (m) return [m[1].replace(/_$/,"")+"_"+m[2], m[2]+m[3]];
+  return [stem, ""];
+}
+
+function readSnapGene(buffer) {
+  const view = new DataView(buffer);
+  const bytes = new Uint8Array(buffer);
+  let seq = null;
+  const features = [];
+  let pos = 0;
+  while (pos < bytes.length) {
+    if (pos + 5 > bytes.length) break;
+    const tag = bytes[pos];
+    const length = view.getUint32(pos + 1, false);
+    pos += 5;
+    if (pos + length > bytes.length) break;
+    const block = bytes.slice(pos, pos + length);
+    if (tag === 0) {
+      seq = new TextDecoder().decode(block.slice(1));
+    } else if (tag === 10) {
+      try {
+        const xml = new TextDecoder().decode(block);
+        const doc = new DOMParser().parseFromString(xml, "text/xml");
+        doc.querySelectorAll("Feature").forEach(f => {
+          const name = f.getAttribute("name") || f.querySelector("Q[k='label']")?.getAttribute("v") || "";
+          let minStart = Infinity, maxEnd = -Infinity;
+          f.querySelectorAll("Segment").forEach(s => {
+            const m = (s.getAttribute("range")||"").match(/(\d+)-(\d+)/);
+            if (m) { minStart = Math.min(minStart, parseInt(m[1])-1); maxEnd = Math.max(maxEnd, parseInt(m[2])); }
+          });
+          if (minStart !== Infinity) features.push({ name, start: minStart, end: maxEnd });
+        });
+      } catch(e) {}
+    }
+    pos += length;
+  }
+  return { seq, features };
+}
+
+function matchFeatures(features, keywords) {
+  return features.filter(f => keywords.some(kw => f.name.toLowerCase().includes(kw.toLowerCase())));
+}
+
+function extractMergedSpan(seq, hits) {
+  if (!hits.length || !seq) return null;
+  const sorted = [...hits].sort((a,b) => a.start - b.start);
+  const earliestStart = sorted[0].start;
+  const latestEnd = Math.max(...sorted.map(f => f.end));
+  const window = seq.slice(earliestStart, earliestStart + 300).toUpperCase();
+  const atgOffset = window.indexOf("ATG");
+  if (atgOffset === -1) return null;
+  const absAtg = earliestStart + atgOffset;
+  const searchSeq = seq.slice(absAtg, absAtg + 10000);
+  const STOPS = ["TAA","TAG","TGA"];
+  for (let i = 0; i < searchSeq.length - 2; i += 3) {
+    if (STOPS.includes(searchSeq.slice(i,i+3).toUpperCase())) {
+      if (absAtg + i + 3 >= latestEnd) return searchSeq.slice(0, i+3).toUpperCase();
+    }
+  }
+  return null;
+}
+
+function processFile(buffer, filename) {
+  const { seq, features } = readSnapGene(buffer);
+  const aptn = extractMergedSpan(seq, matchFeatures(features, APTN_KW));
+  const aptc = extractMergedSpan(seq, matchFeatures(features, APTC_KW));
+  return { filename, aptn, aptc };
+}
+
+function buildExcel(rows) {
+  const wb = XLSX.utils.book_new();
+  const data = [["ID","Full ID","File Name","AptN sequence (ATG → stop)","AptC sequence (ATG → stop)"]];
+  rows.forEach(({filename, aptn, aptc}) => {
+    const [shortId, fullId] = parseIds(filename);
+    data.push([shortId, fullId, filename, aptn||"NOT FOUND", aptc||"NOT FOUND"]);
+  });
+  const ws = XLSX.utils.aoa_to_sheet(data);
+  ws["!cols"] = [{wch:16},{wch:40},{wch:50},{wch:80},{wch:80}];
+  XLSX.utils.book_append_sheet(wb, ws, "Extracted Sequences");
+  XLSX.writeFile(wb, "extracted_sequences.xlsx");
+}
+
+document.getElementById("folder-input").addEventListener("change", async function() {
+  const files = [...this.files].filter(f => f.name.toLowerCase().endsWith(".dna"));
+  if (!files.length) return;
+
+  document.getElementById("upload-card").style.display = "none";
+  document.getElementById("status-area").style.display = "block";
+
+  const list = document.getElementById("file-list");
+  list.innerHTML = "";
+  extractedRows = [];
+  let bothCount = 0, missCount = 0;
+  document.getElementById("m-total").textContent = files.length;
+
+  for (let i = 0; i < files.length; i++) {
+    const f = files[i];
+    document.getElementById("progress-bar").style.width = ((i+1)/files.length*100)+"%";
+
+    const li = document.createElement("li");
+    li.innerHTML = `<i class="ti ti-loader-2" style="font-size:16px;color:var(--text-hint)"></i><span class="file-name">${f.name}</span><span class="file-detail">reading…</span>`;
+    list.appendChild(li);
+    await new Promise(r => setTimeout(r, 0));
+
+    try {
+      const result = processFile(await f.arrayBuffer(), f.name);
+      extractedRows.push(result);
+      const both = !!(result.aptn && result.aptc);
+      const none = !result.aptn && !result.aptc;
+      if (both) bothCount++; else missCount++;
+      document.getElementById("m-both").textContent = bothCount;
+      document.getElementById("m-miss").textContent = missCount;
+      const icon = both ? "ti-check ok" : none ? "ti-alert-circle err" : "ti-alert-triangle warn";
+      const detail = [result.aptn ? `AptN: ${result.aptn.length}bp` : "AptN: missing", result.aptc ? `AptC: ${result.aptc.length}bp` : "AptC: missing"].join(" · ");
+      li.innerHTML = `<i class="ti ${icon}" style="font-size:16px"></i><span class="file-name">${f.name}</span><span class="file-detail">${detail}</span>`;
+    } catch(e) {
+      missCount++;
+      li.innerHTML = `<i class="ti ti-x err" style="font-size:16px"></i><span class="file-name">${f.name}</span><span class="file-detail" style="color:var(--red-text)">error reading file</span>`;
+    }
+    await new Promise(r => setTimeout(r, 0));
+  }
+});
+
+document.getElementById("dl-btn").addEventListener("click", () => { if(extractedRows.length) buildExcel(extractedRows); });
+document.getElementById("reset-btn").addEventListener("click", () => {
+  document.getElementById("upload-card").style.display = "block";
+  document.getElementById("status-area").style.display = "none";
+  document.getElementById("folder-input").value = "";
+  document.getElementById("progress-bar").style.width = "0%";
+  extractedRows = [];
+});
+
+renderTags();
+</script>
+</body>
+</html>
