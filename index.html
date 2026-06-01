@@ -288,6 +288,7 @@
 <script>
 const APTN_KW = ["aptn","apt_n","apt-n","aptn_gngg","aptn_nz"];
 const APTC_KW = ["aptc","apt_c","apt-c","aptc cds","aptc_cds"];
+const BLOCKLIST = ["identical","stuffer","partial"];
 let extractedRows = [];
 
 function renderTags() {
@@ -361,7 +362,11 @@ function readSnapGene(buffer) {
 }
 
 function matchFeatures(features, keywords) {
-  return features.filter(f => keywords.some(kw => f.name.toLowerCase().includes(kw.toLowerCase())));
+  return features.filter(f => {
+    const name = f.name.toLowerCase();
+    if (BLOCKLIST.some(bl => name.includes(bl))) return false;
+    return keywords.some(kw => name.includes(kw.toLowerCase()));
+  });
 }
 
 function extractMergedSpan(seq, hits) {
